@@ -1,0 +1,46 @@
+{
+  "name": "corner-weather-card",
+  "version": "0.1.0",
+  "description": "Corner Cards 系列之动态天气场景卡片，基于 Web Component，一行代码嵌入任意博客",
+  "type": "module",
+  "main": "./dist/corner-weather-card.iife.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/corner-weather-card.iife.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build"
+  },
+  "keywords": [
+    "weather",
+    "web-component",
+    "custom-elements",
+    "qweather",
+    "lit",
+    "blog",
+    "widget",
+    "card",
+    "corner-cards"
+  ],
+  "license": "MIT",
+  "author": "hf-wind",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hf-wind/corner-cards.git",
+    "directory": "packages/core"
+  },
+  "dependencies": {
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}

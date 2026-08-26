@@ -1,0 +1,21 @@
+{
+  "name": "corner-cards",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Corner Cards 系列为博客角落而生的小组件集合，第一款为动态天气场景卡片 weather-card",
+  "license": "MIT",
+  "author": "hf-wind",
+  "homepage": "https://github.com/hf-wind/corner-cards#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hf-wind/corner-cards.git"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter corner-weather-card dev",
+    "build": "pnpm -r build"
+  }
+}

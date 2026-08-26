@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>corner-weather-card playground</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', sans-serif;
+        background: #eef1f5;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        align-items: center;
+        padding: 48px 16px;
+        margin: 0;
+      }
+      h1 { font-size: 18px; color: #343a40; }
+      p { font-size: 13px; color: #868e96; margin: -16px 0 0; }
+      corner-weather[size='banner'] { max-width: 720px; width: 100%; }
+      corner-weather[size='standard'] { width: 340px; }
+    </style>
+    <script type="module" src="./src/index.ts"></script>
+  </head>
+  <body>
+    <h1>Corner Cards · weather-card playground</h1>
+    <p>在标签中填入你的和风天气 Key 与 Location ID；无 Key 时将展示错误态。</p>
+    <corner-weather location="101010100" key="" size="standard"></corner-weather>
+    <corner-weather location="101010100" key="" size="compact"></corner-weather>
+    <corner-weather location="101010100" key="" size="banner"></corner-weather>
+  </body>
+</html>

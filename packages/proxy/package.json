@@ -1,0 +1,17 @@
+{
+  "name": "corner-weather-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Corner Cards 天气代理模板：Cloudflare Worker 转发和风天气请求，保护 API Key 不暴露在前端",
+  "type": "module",
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hf-wind/corner-cards.git",
+    "directory": "packages/proxy"
+  }
+}
