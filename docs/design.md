@@ -13,6 +13,7 @@
 | 品牌命名 | Corner Cards 系列（呼应博客 corner.ink），本项目包名 `corner-weather-card`，仓库 `corner-cards` | 个人品牌资产复用，可持续扩展同类小组件 |
 | 技术形态 | Web Component（Lit 3 + TypeScript + Vite） | 任意博客可 `<script>` 接入；Lit 仅 ~5KB，样式天然隔离 |
 | 数据链路 | 直连与自建代理二选一（`key` 或 `api-base`） | 兼顾零门槛接入与 Key 安全 |
+| 认证策略 | 三分支互斥：`jwt`（Bearer 头）> `api-base`（代理负责）> `key`（query 参数）；代理按 env 自动选择 JWT 签发或 Key 转发 | 和风 2027 年起降低 API Key 请求配额，JWT 不受影响；JWT 私钥不可进前端，故由 Worker 代签并缓存至过期前 5 分钟 |
 | UI 方向 | 动态天气场景风（类 iOS 天气）：渐变背景 + Canvas 粒子随天气变化 | 项目核心卖点 |
 | 尺寸适配 | 三种预设：compact / standard / banner | 覆盖侧边栏、正文、页头页脚场景 |
 | AI 模块 | 二期实现 DeepSeek 提醒文案；一期预留 `/api/ai` 代理路由与组件 `ai` 扩展点 | 先把本体做到极致，控制首发范围 |
@@ -71,6 +72,12 @@ packages/
 - 代理端：`POST /api/ai` 路由已预留（当前返回 501），届时注入 DeepSeek Key 作为 Worker Secret
 - 组件端：计划新增 `ai` 属性开关，在 banner/standard 布局中追加一条 AI 提醒文案位
 - 协议：一期不定死请求/响应结构，二期结合提醒场景再定稿
+
+## 认证实现细节
+
+- 浏览器端：`jwt` 属性存在时以 `Authorization: Bearer` 发送，否则无凭据走代理、最后回退 `?key=` 直连
+- Worker 端：`JWT_PRIVATE_KEY + JWT_KID + JWT_SUB` 齐备 → Ed25519(WebCrypto) 签发 `{alg:"EdDSA",kid} {sub,iat,exp}`，exp 上限 24h，模块级内存缓存至过期前 5 分钟；仅配 `QWEATHER_KEY` → 转发模式自动补 key 参数；两者皆无 → 返回 503 配置提示
+- 密钥规范：Ed25519 PKCS8 私钥 / SPKI 公钥 PEM 格式（`openssl genpkey -algorithm ed25519`），公钥上传和风控制台创建 JSON Web Token 凭据
 
 ## 构建与发布
 

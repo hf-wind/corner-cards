@@ -12,6 +12,7 @@ import type { SizePreset, ThemeMode, WeatherSnapshot } from './types'
 
 export class CornerWeather extends LitElement {
   @property() key = ''
+  @property() jwt = ''
   @property() host = ''
   @property({ attribute: 'api-base' }) apiBase = ''
   @property() location = ''
@@ -302,7 +303,9 @@ export class CornerWeather extends LitElement {
 
   protected updated(changed: PropertyValues): void {
     if (
-      ['location', 'lang', 'unit', 'key', 'host', 'apiBase'].some((k) => changed.has(k as never))
+      ['location', 'lang', 'unit', 'key', 'jwt', 'host', 'apiBase'].some((k) =>
+        changed.has(k as never),
+      )
     ) {
       void this.load(false)
     }
@@ -319,7 +322,7 @@ export class CornerWeather extends LitElement {
 
   private async load(force: boolean): Promise<void> {
     if (!this.location) return
-    const reqKey = [this.location, this.lang, this.unit, this.key, this.host, this.apiBase].join('|')
+    const reqKey = [this.location, this.lang, this.unit, this.key, this.jwt, this.host, this.apiBase].join('|')
     const ck = cacheKey(['wx', this.location, this.lang, this.unit])
     const cached = readCache<WeatherSnapshot>(ck)
     if (cached && !this.snapshot) {
@@ -343,6 +346,7 @@ export class CornerWeather extends LitElement {
         lang: this.lang,
         unit: this.unit,
         key: this.key || undefined,
+        jwt: this.jwt || undefined,
         host: this.host || undefined,
         apiBase: this.apiBase || undefined,
         signal: ac.signal,

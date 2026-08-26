@@ -7,6 +7,7 @@ export interface FetchOptions {
   lang?: string
   unit?: string
   key?: string
+  jwt?: string
   host?: string
   apiBase?: string
   signal?: AbortSignal
@@ -20,8 +21,8 @@ function buildUrl(path: string, params: URLSearchParams, opts: FetchOptions): st
   return `https://${host}${path}?${params}`
 }
 
-async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal })
+async function getJson<T>(url: string, headers: Record<string, string>, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { headers, signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const json = (await res.json()) as T & { code?: string }
   if (json.code && json.code !== '200') throw new Error(`QWeather code ${json.code}`)
@@ -34,10 +35,15 @@ export async function fetchWeather(opts: FetchOptions): Promise<WeatherSnapshot>
     lang: opts.lang ?? 'zh',
     unit: opts.unit ?? 'c',
   })
-  if (!opts.apiBase && opts.key) params.set('key', opts.key)
+  const headers: Record<string, string> = {}
+  if (opts.jwt) {
+    headers.Authorization = `Bearer ${opts.jwt}`
+  } else if (!opts.apiBase && opts.key) {
+    params.set('key', opts.key)
+  }
   const [nowRes, dailyRes] = await Promise.all([
-    getJson<QWeatherNowResponse>(buildUrl('/v7/weather/now', params, opts), opts.signal),
-    getJson<QWeatherDailyResponse>(buildUrl('/v7/weather/3d', params, opts), opts.signal),
+    getJson<QWeatherNowResponse>(buildUrl('/v7/weather/now', params, opts), headers, opts.signal),
+    getJson<QWeatherDailyResponse>(buildUrl('/v7/weather/3d', params, opts), headers, opts.signal),
   ])
   const today = dailyRes.daily[0]
   if (!today) throw new Error('empty forecast')
