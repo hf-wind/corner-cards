@@ -1,9 +1,0 @@
-name = "corner-weather-proxy"
-main = "src/worker.ts"
-compatibility_date = "2026-01-01"
-
-[vars]
-ALLOWED_ORIGIN = "*"
-QWEATHER_HOST = "devapi.qweather.com"
-JWT_KID = ""
-JWT_SUB = ""

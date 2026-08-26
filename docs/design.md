@@ -35,8 +35,8 @@ packages/
 │       │   ├── particles.ts     Canvas 粒子引擎（雨/雪/尘/星空）
 │       │   └── icons.ts         场景 SVG 图标（含 CSS 微动效）
 │       └── utils/day-night.ts   日出日落昼夜判断
-└── proxy/                 corner-weather-proxy（Cloudflare Worker 模板）
-    └── src/worker.ts            /api/weather/* 转发 + /api/ai 预留路由
+proxy 已拆分为独立仓库：https://github.com/hf-wind/corner-weather-proxy
+（Cloudflare Worker：/api/weather/* 转发 + /api/ai 预留路由；独立仓库使 Deploy 按钮原生可用）
 ```
 
 ## 数据流

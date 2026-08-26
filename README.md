@@ -37,7 +37,7 @@ Corner Cards 是一组轻量、精致、开箱即用的博客嵌入组件，全�
 | API Key | 一串固定字符串，配置最简单 | ⚠️ 官方公告：2027 年起将降低 API Key 的请求配额，适合短期试用 |
 | JSON Web Token | Ed25519 密钥对签名认证，配额不受影响 | ✅ 推荐长期使用，需配合本文的代理方式 |
 
-3. 在项目设置中记下 **Project ID**；同时确认你的订阅类型对应的 API Host（免费订阅为 `devapi.qweather.com`，付费或新建项目可能是形如 `abc123.re.qweatherapi.com` 的专用域名）
+3. 打开控制台**左侧「设置」页面**——每个账号在这里都有一个**专属 API Host**（形如 `xxxxx.re.qweatherapi.com`，同时展示开发者 ID 等账号信息），记下它；新账号的凭据已绑定此 Host，旧的通用域名 `devapi.qweather.com` 会返回 403 Invalid Host，接入时必须替换（见方式 B-4）
 
 ## 接入方式一览
 
@@ -67,111 +67,77 @@ Corner Cards 是一组轻量、精致、开箱即用的博客嵌入组件，全�
 
 ## 方式 B：代理 + JWT（推荐，一次性配置约 5 分钟）
 
-原理：你的 Cloudflare Worker 替你保管私钥、自动签发 JWT 并转发请求。博客端永远只需要一个 `api-base` 地址。
+原理：你的 Cloudflare Worker 替你保管和风私钥、自动签发 JWT 并转发请求。博客端永远只需要一个 `api-base` 地址。
 
-> **开始前先弄清两个概念**
->
-> - `workers.dev` 地址只是 Worker 的"门牌号"——部署完成那一刻就存在且永久有效
-> - 凭据 ID + 项目 ID + 私钥是"门禁钥匙"——三件套配齐之前，天气接口会按设计返回 503 配置提示，**这不是故障**，严格按 B-1 → B-7 顺序做完即可
+> 两个概念先分清：`workers.dev` 地址只是 Worker 的"门牌号"，部署即存在；凭据三件套（凭据 ID、项目 ID、私钥）是"门禁钥匙"。钥匙没配齐时天气接口按设计返回 503 提示——这不是故障。
 
-### B-1 生成本地密钥对
+完整教程与一键部署入口已独立在代理仓库：**[corner-weather-proxy](https://github.com/hf-wind/corner-weather-proxy)**
 
-在本机执行（需安装 openssl，Windows 可用 Git Bash 自带版本）：
+### 路线一：网页操作（推荐，全程无需命令行）
 
-```bash
-mkdir -p ~/.ssh/qweather
-openssl genpkey -algorithm ed25519 -out ~/.ssh/qweather/qweather-ed25519.key
-openssl pkey -in ~/.ssh/qweather/qweather-ed25519.key -pubout -out ~/.ssh/qweather/qweather-ed25519.pub
-```
+点击按钮并按引导授权 GitHub 创建 Worker：
 
-✅ 完成标志：目录下出现两个文件
+**[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hf-wind/corner-weather-proxy)**
 
-- `qweather-ed25519.key` —— **私钥**，绝不外传、绝不入库，B-6 要用到
-- `qweather-ed25519.pub` —— 公钥，下一步粘贴给和风
+流程概要（逐步细节见 [代理仓库 README](https://github.com/hf-wind/corner-weather-proxy#五步接入网页操作为主约-5-分钟)）：
 
-### B-2 在和风控制台创建 JWT 凭据
+1. 本地生成密钥对——唯一需要终端的一步，Git Bash / Terminal 三条复制粘贴命令
+2. 和风控制台：上传公钥创建「JSON Web Token」凭据 → 记下凭据 ID、项目 ID；左侧「设置」页记下专属 API Host
+3. 一键部署 → 得到 `workers.dev` 访问地址
+4. Cloudflare 控制台 Variables and Secrets 里填入三件套 + API Host
+5. 验证接口返回 `"code":"200"` 后，博客卡片填 `api-base`
 
-控制台 → 你的项目 → 创建凭据 → 选择 **JSON Web Token** → 把 `.pub` 文件的完整内容（含 BEGIN/END 行）粘贴进去。
-
-✅ 完成标志：记下两串字符
-
-- **Credential ID**（凭据 ID，即 JWT 的 `kid`）
-- **Project ID**（项目 ID，即 JWT 的 `sub`）
-
-### B-3 获取代码并登录 Cloudflare
+### 路线二：命令行部署（开发者备选）
 
 ```bash
-git clone https://github.com/hf-wind/corner-cards.git
-cd corner-cards/packages/proxy
+git clone https://github.com/hf-wind/corner-weather-proxy.git
+cd corner-weather-proxy
 npm install -g wrangler && npx wrangler login
 ```
 
-⚠️ 重要：**之后所有 `wrangler` 命令都必须在 `packages/proxy` 目录下执行**——wrangler 靠该目录下的 `wrangler.toml` 识别要操作哪个 Worker，在别的目录运行会报 `Required Worker name missing`。
+⚠️ 之后所有 `wrangler` 命令都必须在该仓库目录内执行，否则报 `Required Worker name missing`。
 
-✅ 完成标志：浏览器弹出 Cloudflare 授权页并显示登录成功。
-
-> 不想用命令行？也可以用一键部署按钮（见下方「一键部署路线」），配置改在网页控制台完成。
-
-### B-4 部署前先填入凭据 ID 与项目 ID
-
-编辑 `packages/proxy/wrangler.toml`：
+编辑 `wrangler.toml`：
 
 ```toml
 [vars]
-JWT_KID = "B-2 拿到的凭据ID"
-JWT_SUB = "B-2 拿到的项目ID"
-ALLOWED_ORIGIN = "https://你的博客域名"
+JWT_KID = "凭据ID"
+JWT_SUB = "项目ID"
+QWEATHER_HOST = "你的专属host.re.qweatherapi.com"
+ALLOWED_ORIGIN = "*"
 ```
 
-✅ 完成标志：保存文件。注意 `[vars]` 改动只在**部署后**生效，所以务必先做这步再做 B-5。
+> **三个配置要点**
+>
+> - **QWEATHER_HOST**：每个和风账号都有专属 API Host（控制台左侧「设置」页查看），必须替换默认值，否则返回 403 `"Invalid Host"`
+> - **别混淆三个 ID**：`JWT_SUB` 是项目 ID；「开发者 ID」是账号级标识不用于 JWT；凭据 ID 才是 `JWT_KID`
+> - **ALLOWED_ORIGIN**：`*` 允许全网调用（调试方便）；生产建议填博客域名，防止配额被陌生人消耗
 
-### B-5 首次部署
+首次部署并上传私钥（按终端类型三选一）：
 
 ```bash
 npx wrangler deploy
-```
 
-✅ 完成标志：终端输出访问地址，形如 `https://corner-weather-proxy.<你的子域>.workers.dev`；浏览器打开它应显示 `corner-weather-proxy is running.`
-
-两个正常现象，不要慌：
-
-1. 新注册的 workers.dev 子域名 SSL 证书签发需要几分钟到半小时，期间浏览器可能报 `ERR_SSL_VERSION_OR_CIPHER_MISMATCH`——稍等再试
-2. 此时天气接口仍会返回 503 not configured——还差最后一步私钥（B-6）
-
-### B-6 上传私钥（最后一步，上传即生效）
-
-仍在 `packages/proxy` 目录下，按你的终端类型选择命令：
-
-macOS / Linux / Windows Git Bash：
-
-```bash
+# macOS / Linux / Git Bash
 npx wrangler secret put JWT_PRIVATE_KEY < ~/.ssh/qweather/qweather-ed25519.key
 ```
 
-Windows PowerShell（不支持 `<` 重定向，用管道等价写法）：
-
 ```powershell
+# Windows PowerShell（不支持 < 重定向，用管道）
 Get-Content "$env:USERPROFILE\.ssh\qweather\qweather-ed25519.key" -Raw | npx wrangler secret put JWT_PRIVATE_KEY
 ```
 
-Windows cmd（注意跨盘符切换目录必须加 `/d`）：
+secret 上传后自动生效，无需重复 deploy。
+
+### 验证并接入博客
+
+用 curl 验证全链路。⚠️ 路径中必须带 `/v7/weather/now`——组件会自动拼接完整路径，手动测试容易漏掉这一段：
 
 ```bat
-cd /d d:\你的仓库路径\corner-cards\packages\proxy
-npx wrangler secret put JWT_PRIVATE_KEY < %USERPROFILE%\.ssh\qweather\qweather-ed25519.key
+curl.exe -x http://127.0.0.1:7892 "https://corner-weather-proxy.<你的子域>.workers.dev/api/weather/v7/weather/now?location=101010100&lang=zh"
 ```
 
-✅ 完成标志：终端显示 `Success! Uploaded secret JWT_PRIVATE_KEY`。secret 上传后会自动生成新版本并立即生效，**无需再次 deploy**。
-
-至此三件套配齐（`JWT_KID`、`JWT_SUB`、`JWT_PRIVATE_KEY`），代理进入 JWT 模式。
-
-### B-7 验证并接入博客
-
-```bash
-curl "https://corner-weather-proxy.<你的子域>.workers.dev/api/weather/now?location=101010100&lang=zh"
-```
-
-返回含 `"code":"200"` 与天气数据的 JSON 即全链路打通。博客里只需一行标签：
+✅ HTTP 200 且响应体含 `"code":"200"` 与 `now` 天气对象即为打通（国内网络需给 curl 加 `-x` 指定本机代理）。然后博客里只需一行标签：
 
 ```html
 <script type="module"
@@ -180,17 +146,7 @@ curl "https://corner-weather-proxy.<你的子域>.workers.dev/api/weather/now?lo
 <corner-weather api-base="https://corner-weather-proxy.<你的子域>.workers.dev" location="101010100"></corner-weather>
 ```
 
-此后无需再关心认证细节——Token 过期前 5 分钟代理会自动重签。
-
-### 一键部署路线的对应操作
-
-使用 [Deploy 按钮](https://deploy.workers.cloudflare.com/?url=https://github.com/hf-wind/corner-cards) 或控制台导入 GitHub 仓库部署时，B-4 / B-6 改在网页上完成：
-Cloudflare 控制台 → Workers & Pages → 你的 Worker → Settings → **Variables and Secrets**
-
-- 添加变量（Type: Text）：`JWT_KID`、`JWT_SUB`
-- 添加密钥（Type: Secret）：`JWT_PRIVATE_KEY`，粘贴 `.key` 文件全文
-
-每次保存都会自动重新部署生效。
+此后无需再关心认证细节——Token 过期前 5 分钟代理会自动重签。更多排错项见[代理仓库的常见问题表](https://github.com/hf-wind/corner-weather-proxy#常见问题)。
 
 ### 兼容说明
 
@@ -200,11 +156,9 @@ Cloudflare 控制台 → Workers & Pages → 你的 Worker → Settings → **Va
 
 | 现象 | 原因 | 解决 |
 | --- | --- | --- |
-| PowerShell 报「"<"运算符是为将来使用而保留的」 | PowerShell 不支持输入重定向 `<` | 改用上方管道版命令 |
-| cmd 报 `Required Worker name missing` | 不在 `packages/proxy` 目录执行（cmd 跨盘符需 `cd /d` 才真正切换） | 先 `cd /d <路径>\packages\proxy` 再运行 wrangler |
-| 浏览器报 `ERR_SSL_VERSION_OR_CIPHER_MISMATCH` | 新注册子域名的 SSL 证书尚未签发完 | 等 10~30 分钟重试；国内网络确认浏览器走了代理 |
-| 天气接口返回 503 not configured | 三件套未配齐或未生效 | 核对 B-4 是否已 deploy、B-6 是否显示 Success，缺一即为 503 |
-| 和风返回 401 等业务错误码 | kid/sub 填错，或公钥与本地私钥不是同一对 | 核对 B-2 两串 ID 与上传的公钥内容 |
+| 一键部署报「无法获取存储库内容」，或提示 Monorepo 尚不完全支持 | Deploy 按钮 URL 指向了本仓库——它是 monorepo，Worker 不在根目录 | 改用指向独立仓库的按钮：`https://deploy.workers.cloudflare.com/?url=https://github.com/hf-wind/corner-weather-proxy` |
+
+代理部署、验证与和风鉴权的完整排错表（SSL 签发等待、PowerShell `<`、cmd `cd /d`、503 / 403 Invalid Host / 404 路径 / 401 等）见 [corner-weather-proxy 常见问题](https://github.com/hf-wind/corner-weather-proxy#常见问题)。
 
 ## 方式 C：直传现成 JWT Token（进阶）
 
